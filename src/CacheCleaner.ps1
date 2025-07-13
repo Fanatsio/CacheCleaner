@@ -3,10 +3,8 @@ param(
     [switch]$SkipRecycleBin = $false
 )
 
-# Запрос прав администратора
 $isAdmin = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
 if (-not $isAdmin.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    # Запускаем скрытое окно PowerShell для UAC запроса
     $processInfo = New-Object System.Diagnostics.ProcessStartInfo
     $processInfo.FileName = "powershell.exe"
     $processInfo.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$PSCommandPath`" -AutoConfirm:$($AutoConfirm.IsPresent) -SkipRecycleBin:$($SkipRecycleBin.IsPresent)"
@@ -25,27 +23,22 @@ if (-not $isAdmin.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrato
     exit
 }
 
-# Режим автоматического подтверждения
 if ($AutoConfirm) {
-    # ... (код автоматической очистки из оригинального скрипта)
     exit
 }
 
-# Скрываем консольное окно
 Add-Type -Name Window -Namespace Console -MemberDefinition '
 [DllImport("Kernel32.dll")]
 public static extern IntPtr GetConsoleWindow();
 [DllImport("user32.dll")]
 public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);'
 $consolePtr = [Console.Window]::GetConsoleWindow()
-[Console.Window]::ShowWindow($consolePtr, 0) | Out-Null  # 0 = SW_HIDE
+[Console.Window]::ShowWindow($consolePtr, 0) | Out-Null
 
-# Загрузка сборок для GUI
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
-# Основная форма
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "Очистка системы"
 $form.Size = New-Object System.Drawing.Size(600, 500)
@@ -55,23 +48,19 @@ $form.MaximizeBox = $false
 $form.BackColor = [System.Drawing.Color]::FromArgb(240, 240, 240)
 $form.Font = New-Object System.Drawing.Font("Segoe UI", 9)
 
-# Иконка приложения из указанного пути
 $iconPath = "D:\Project\CacheCleaner\build\icon.ico"
 if (Test-Path $iconPath) {
     try {
         $form.Icon = [System.Drawing.Icon]::new($iconPath)
     } catch {
-        # Резервная иконка при ошибке
         $fallbackIcon = [System.IO.Path]::Combine([System.Environment]::GetFolderPath('System'), 'shell32.dll')
         $form.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($fallbackIcon)
     }
 } else {
-    # Резервная иконка если файл не найден
     $fallbackIcon = [System.IO.Path]::Combine([System.Environment]::GetFolderPath('System'), 'shell32.dll')
     $form.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($fallbackIcon)
 }
 
-# Заголовок
 $header = New-Object System.Windows.Forms.Label
 $header.Text = "Очистка системы"
 $header.Font = New-Object System.Drawing.Font("Segoe UI", 14, [System.Drawing.FontStyle]::Bold)
@@ -80,14 +69,12 @@ $header.Size = New-Object System.Drawing.Size(400, 30)
 $header.Location = New-Object System.Drawing.Point(20, 20)
 $form.Controls.Add($header)
 
-# Панель действий
 $actionsPanel = New-Object System.Windows.Forms.GroupBox
 $actionsPanel.Text = "Выберите действия:"
 $actionsPanel.Location = New-Object System.Drawing.Point(20, 70)
 $actionsPanel.Size = New-Object System.Drawing.Size(540, 150)
 $actionsPanel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
 
-# Флажки действий
 $chkSystemTemp = New-Object System.Windows.Forms.CheckBox
 $chkSystemTemp.Text = "Очистить системную папку Temp"
 $chkSystemTemp.Location = New-Object System.Drawing.Point(20, 30)
@@ -118,7 +105,6 @@ $actionsPanel.Controls.Add($chkRecycleBin)
 
 $form.Controls.Add($actionsPanel)
 
-# Логгер
 $logBox = New-Object System.Windows.Forms.RichTextBox
 $logBox.Location = New-Object System.Drawing.Point(20, 240)
 $logBox.Size = New-Object System.Drawing.Size(540, 160)
@@ -127,14 +113,12 @@ $logBox.BackColor = [System.Drawing.Color]::White
 $logBox.Font = New-Object System.Drawing.Font("Consolas", 9)
 $form.Controls.Add($logBox)
 
-# Прогресс-бар
 $progressBar = New-Object System.Windows.Forms.ProgressBar
 $progressBar.Location = New-Object System.Drawing.Point(20, 410)
 $progressBar.Size = New-Object System.Drawing.Size(540, 20)
 $progressBar.Style = "Continuous"
 $form.Controls.Add($progressBar)
 
-# Кнопки
 $btnClean = New-Object System.Windows.Forms.Button
 $btnClean.Text = "Выполнить очистку"
 $btnClean.Location = New-Object System.Drawing.Point(20, 440)
@@ -156,7 +140,6 @@ $btnExit.FlatAppearance.BorderSize = 0
 $form.Controls.Add($btnClean)
 $form.Controls.Add($btnExit)
 
-# Функция логирования
 function Add-Log {
     param(
         [string]$Message,
@@ -179,7 +162,6 @@ function Add-Log {
     $logBox.ScrollToCaret()
 }
 
-# Обработчики кнопок
 $btnClean.Add_Click({
     $btnClean.Enabled = $false
     $btnExit.Enabled = $false
@@ -264,8 +246,6 @@ $btnClean.Add_Click({
 
 $btnExit.Add_Click({ $form.Close() })
 
-# Запуск формы
 [void]$form.ShowDialog()
 
-# При закрытии формы завершаем процесс
 exit
